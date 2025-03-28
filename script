@@ -1,0 +1,274 @@
+-- Make sure to require Orion in your game (if not already loaded)
+local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/olyogrove/Orion/main/Source/OrionUILibrary"))()
+
+-- Create a window with title and optional settings
+local Window = OrionLib:MakeWindow({
+    Name = "Universal Roblox Tools & Troll UI", -- The name of your UI window
+    HidePremium = false, -- Show or hide Premium users
+    SaveConfig = true, -- Enable configuration saving
+    ConfigFolder = "UniversalRobloxScript" -- Folder where the UI config is saved
+})
+
+-- Tab Creation: Main Tab
+local MainTab = Window:MakeTab({
+    Name = "Main",
+    Icon = "rbxassetid://6031075937", -- You can use any asset ID here
+    PremiumOnly = false, -- Make it available for all users
+})
+
+local flyEnabled = false
+local flySpeed = 50
+local jumpHeight = 50
+local antiAFKEnabled = false
+
+-- Fly Functionality
+local function StartFly()
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    local humanoid = character:WaitForChild("Humanoid")
+    local bodyGyro = Instance.new("BodyGyro")
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyGyro.MaxTorque = Vector3.new(400000, 400000, 400000)
+    bodyGyro.D = 9
+    bodyGyro.Parent = character:WaitForChild("HumanoidRootPart")
+    bodyVelocity.MaxForce = Vector3.new(400000, 400000, 400000)
+    bodyVelocity.Velocity = Vector3.new(0, flySpeed, 0)
+    bodyVelocity.Parent = character:WaitForChild("HumanoidRootPart")
+end
+
+local function StopFly()
+    local character = game.Players.LocalPlayer.Character
+    if character then
+        local bodyGyro = character:FindFirstChild("BodyGyro")
+        local bodyVelocity = character:FindFirstChild("BodyVelocity")
+        if bodyGyro then bodyGyro:Destroy() end
+        if bodyVelocity then bodyVelocity:Destroy() end
+    end
+end
+
+-- Anti-AFK (Prevents kicking for being idle)
+local function AntiAFK()
+    while antiAFKEnabled do
+        game:GetService("Players").LocalPlayer.Idled:connect(function()
+            game:GetService("VirtualUser"):Button2Down(Vector2.new(0, 0), game:GetService("Workspace"))
+            game:GetService("VirtualUser"):Button2Up(Vector2.new(0, 0), game:GetService("Workspace"))
+        end)
+        wait(60)
+    end
+end
+
+-- Main Tab Buttons
+MainTab:AddButton({
+    Name = "Fly Toggle", 
+    Callback = function()
+        if not flyEnabled then
+            StartFly()
+            flyEnabled = true
+            OrionLib:MakeNotification({
+                Name = "Fly Mode Activated",
+                Content = "You can now fly!",
+                Time = 3
+            })
+        else
+            StopFly()
+            flyEnabled = false
+            OrionLib:MakeNotification({
+                Name = "Fly Mode Deactivated",
+                Content = "You can no longer fly.",
+                Time = 3
+            })
+        end
+    end
+})
+
+-- Anti AFK Toggle
+MainTab:AddToggle({
+    Name = "Anti-AFK",
+    Default = false,
+    Callback = function(state)
+        antiAFKEnabled = state
+        if antiAFKEnabled then
+            AntiAFK()
+            OrionLib:MakeNotification({
+                Name = "Anti-AFK Activated",
+                Content = "You will not be kicked for inactivity.",
+                Time = 3
+            })
+        end
+    end
+})
+
+-- Jump Power Adjuster
+MainTab:AddSlider({
+    Name = "Jump Power",
+    Min = 50,
+    Max = 500,
+    Default = 50,
+    Increment = 5,
+    Callback = function(value)
+        game.Players.LocalPlayer.Character.Humanoid.JumpPower = value
+    end
+})
+
+-- Change Player Appearance Tab
+local AppearanceTab = Window:MakeTab({
+    Name = "Appearance",
+    Icon = "rbxassetid://6031075937",
+    PremiumOnly = false,
+})
+
+-- Change Character's Shirt Color
+AppearanceTab:AddColorPicker({
+    Name = "Shirt Color",
+    Default = Color3.fromRGB(255, 255, 255),
+    Callback = function(color)
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            local shirt = character:FindFirstChildOfClass("Shirt")
+            if shirt then
+                shirt.ShirtColor = color
+            end
+        end
+    end
+})
+
+-- Change Hair Color
+AppearanceTab:AddColorPicker({
+    Name = "Hair Color",
+    Default = Color3.fromRGB(255, 255, 255),
+    Callback = function(color)
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            local hair = character:FindFirstChildOfClass("Accessory")
+            if hair then
+                hair.Handle.BrickColor = BrickColor.new(color)
+            end
+        end
+    end
+})
+
+-- Player Actions Tab
+local ActionsTab = Window:MakeTab({
+    Name = "Player Actions",
+    Icon = "rbxassetid://6031075937",
+    PremiumOnly = false,
+})
+
+-- Emote Picker (toggle fun emotes)
+ActionsTab:AddButton({
+    Name = "Play Random Emote",
+    Callback = function()
+        local emotes = {
+            "Dance1", "Dance2", "Wave", "Laugh", "Cheer"
+        }
+        local randomEmote = emotes[math.random(1, #emotes)]
+        local animation = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):LoadAnimation(game.ReplicatedStorage:WaitForChild(randomEmote))
+        animation:Play()
+        OrionLib:MakeNotification({
+            Name = "Emote Played",
+            Content = "You just played " .. randomEmote,
+            Time = 3
+        })
+    end
+})
+
+-- Sit/Stand Toggle
+ActionsTab:AddButton({
+    Name = "Sit/Stand Toggle",
+    Callback = function()
+        local humanoid = game.Players.LocalPlayer.Character:WaitForChild("Humanoid")
+        if humanoid:GetState() == Enum.HumanoidStateType.Seated then
+            humanoid.Sit = false
+        else
+            humanoid.Sit = true
+        end
+    end
+})
+
+-- Environment Tab
+local EnvironmentTab = Window:MakeTab({
+    Name = "Environment",
+    Icon = "rbxassetid://6031075937",
+    PremiumOnly = false,
+})
+
+-- Change Time of Day
+EnvironmentTab:AddButton({
+    Name = "Set Time to Noon",
+    Callback = function()
+        game.Lighting.ClockTime = 12
+        OrionLib:MakeNotification({
+            Name = "Time Set to Noon",
+            Content = "The in-game time has been set to noon.",
+            Time = 3
+        })
+    end
+})
+
+-- Weather Control
+EnvironmentTab:AddButton({
+    Name = "Start Rain",
+    Callback = function()
+        game.Lighting.Rain = true
+        OrionLib:MakeNotification({
+            Name = "Rain Started",
+            Content = "It's raining now.",
+            Time = 3
+        })
+    end
+})
+
+-- Gravity Modifier
+EnvironmentTab:AddSlider({
+    Name = "Gravity",
+    Min = 50,
+    Max = 200,
+    Default = 196.2, -- Default Roblox gravity
+    Increment = 0.1,
+    Callback = function(value)
+        game.Workspace.Gravity = value
+    end
+})
+
+-- Custom Functions Tab
+local CustomTab = Window:MakeTab({
+    Name = "Custom Functions",
+    Icon = "rbxassetid://6031075937",
+    PremiumOnly = false,
+})
+
+-- NoClip Toggle (walk through walls)
+CustomTab:AddButton({
+    Name = "Enable NoClip",
+    Callback = function()
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+            OrionLib:MakeNotification({
+                Name = "NoClip Activated",
+                Content = "You can now walk through walls.",
+                Time = 3
+            })
+        end
+    end
+})
+
+-- Toggle UI visibility
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0, 150, 0, 50)
+ToggleButton.Position = UDim2.new(0.5, -75, 0, 100)
+ToggleButton.Text = "Toggle UI"
+ToggleButton.Parent = game.Players.LocalPlayer.PlayerGui
+
+ToggleButton.MouseButton1Click:Connect(function()
+    if Window.Enabled then
+        Window:Hide()
+    else
+        Window:Show()
+    end
+end)
+
